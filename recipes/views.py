@@ -1,4 +1,3 @@
-# myapp/views.py
 import json
 from django.http import JsonResponse,HttpResponseBadRequest, HttpResponseNotFound, HttpResponse
 from recipes.core.usecases import create_recipe, create_ingredient, ReadIngredientUseCase, UpdateIngredientUseCase, DeleteIngredientUseCase
