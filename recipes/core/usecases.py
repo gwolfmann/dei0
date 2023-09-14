@@ -1,4 +1,3 @@
-# core/usecases.py
 from recipes.storage.models import IngredientModel
 from recipes.core.entities import Ingredient, Recipe
 from typing import List
