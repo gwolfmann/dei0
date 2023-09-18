@@ -1,14 +1,14 @@
-from recipes.storage.models import IngredientModel
+from recipes.storage.models import IngredientModel, RecipeModel, RecipeIngredientModel
 from recipes.core.entities import Ingredient, Recipe
 from typing import List
+
+def create_ingredient(name,description):
+    return Ingredient(name,description)
 
 def create_recipe(name, ingredients, elaboration):
     # Implement business logic for creating a recipe
     # Validate data and perform any necessary operations
     return Recipe(name, ingredients, elaboration)
-
-def create_ingredient(name,description):
-    return Ingredient(name,description)
 
 class ReadIngredientUseCase:
     def get_by_name(self, name) -> Ingredient:
@@ -93,3 +93,91 @@ class DeleteIngredientUseCase:
             ingredient_model.delete()
         except IngredientModel.DoesNotExist:
             raise ValueError("Ingredient not found.")
+        
+
+class ReadRecipeUseCase:  
+    def get_by_name(self, name) -> Recipe:
+        try:
+            recipe_model = RecipeModel.objects.get(name=name)
+
+            recipe_entity = Recipe(
+                name=recipe_model.name,
+               # ingredients=recipe_model.ingredients,
+                elaboration=recipe_model.elaboration,
+            )
+
+            return recipe_entity
+        except RecipeModel.DoesNotExist:
+            return None
+
+    def get_by_id(self, recipe_id) -> Recipe:
+        try:
+            recipe_model = RecipeModel.objects.get(id=recipe_id)
+            recipe_ingredients_model = RecipeIngredientModel.objects.filter(recipe=recipe_model)
+            ingredients = []
+            for recipe_ingredient_model in recipe_ingredients_model:
+                ingredient_entity = {
+                    "name": recipe_ingredient_model.ingredient.name,
+                    "quantity": recipe_ingredient_model.quantity,
+                }
+                ingredients.append(ingredient_entity)
+            recipe_entity = Recipe(
+                name=recipe_model.name,
+                ingredients=ingredients,
+                elaboration=recipe_model.elaboration,
+            )
+
+            return recipe_entity
+        except RecipeModel.DoesNotExist:
+            return None
+
+    def get_all(self) -> List[Recipe]:
+        try:
+            recipe_models = RecipeModel.objects.all()
+
+            recipe_entities = []
+
+            for recipe_model in recipe_models:
+                recipe_ingredients_model = RecipeIngredientModel.objects.filter(recipe=recipe_model)
+                ingredients = []
+                for recipe_ingredient_model in recipe_ingredients_model:
+                    ingredient_entity = {
+                        "name": recipe_ingredient_model.ingredient.name,
+                        "quantity": recipe_ingredient_model.quantity,
+                    }
+                    ingredients.append(ingredient_entity)
+                recipe_entities.append(Recipe(
+                    name=recipe_model.name,
+                    ingredients=ingredients,
+                    elaboration=recipe_model.elaboration,
+                ))
+            return recipe_entities
+        except Exception:
+            return []
+
+class UpdateRecipeUseCase:
+    def update(self, recipe, recipe_id, new_name, new_ingredients, new_elaboration) -> Recipe:
+        try:
+            original_recipe_model = RecipeModel.objects.get(id=recipe_id)
+
+            recipe.name = new_name
+            recipe.ingredients = new_ingredients
+            recipe.elaboration = new_elaboration
+
+            original_recipe_model.name = new_name
+            original_recipe_model.ingredients = new_ingredients
+            original_recipe_model.elaboration = new_elaboration
+            original_recipe_model.save()
+
+            return recipe
+        except RecipeModel.DoesNotExist:
+            raise ValueError("Recipe not found.")
+
+class DeleteRecipeUseCase:
+    def delete(self, recipe_id):
+        try:
+            recipe_model = RecipeModel.objects.get(id=recipe_id)
+
+            recipe_model.delete()
+        except RecipeModel.DoesNotExist:
+            raise ValueError("Recipe not found.")
