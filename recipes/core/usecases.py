@@ -159,16 +159,28 @@ class UpdateRecipeUseCase:
     def update(self, recipe, recipe_id, new_name, new_ingredients, new_elaboration) -> Recipe:
         try:
             original_recipe_model = RecipeModel.objects.get(id=recipe_id)
+            recipe_ingredients_model = RecipeIngredientModel.objects.filter(recipe=original_recipe_model)
 
             recipe.name = new_name
             recipe.ingredients = new_ingredients
             recipe.elaboration = new_elaboration
 
             original_recipe_model.name = new_name
-            original_recipe_model.ingredients = new_ingredients
+            #original_recipe_model.ingredients = new_ingredients
             original_recipe_model.elaboration = new_elaboration
             original_recipe_model.save()
-
+            for ingredient_original in recipe_ingredients_model:
+                original_ingredient=IngredientModel.objects.get(id=ingredient_original.ingredient_id)
+                original_ingredient.delete()
+            recipe_ingredients_model.delete()
+            for ingredient_data in new_ingredients:
+                ingredient_model = IngredientModel(name=ingredient_data["name"],description="")
+                ingredient_model.save()
+                # Create and save the RecipeIngredientModel linking the recipe and ingredient
+                recipe_ingredient_model = RecipeIngredientModel(recipe=original_recipe_model,
+                                                            ingredient=ingredient_model,
+                                                            quantity=ingredient_data["quantity"])
+                recipe_ingredient_model.save()
             return recipe
         except RecipeModel.DoesNotExist:
             raise ValueError("Recipe not found.")
@@ -177,7 +189,9 @@ class DeleteRecipeUseCase:
     def delete(self, recipe_id):
         try:
             recipe_model = RecipeModel.objects.get(id=recipe_id)
+            recipe_ingredients_model = RecipeIngredientModel.objects.filter(recipe=recipe_model)
 
             recipe_model.delete()
+            recipe_ingredients_model.delete()
         except RecipeModel.DoesNotExist:
             raise ValueError("Recipe not found.")

@@ -27,17 +27,14 @@ def create_recipe_view(request):
 
         # Call the domain use case to create a recipe
         recipe_entity = create_recipe(name, ingredients, elaboration)
-        # Save the Recipe entity to the database
-        # Note: You may need to adapt this code to save the entity properly using Django's ORM
-        # For example, assuming RecipeModel is your Django model for recipes:
-        ingredient_models = []
+        
         recipe_model = RecipeModel(
             name=name,
             elaboration=elaboration
         )
         recipe_model.save()
         for ingredient_data in ingredients:
-            ingredient_model = IngredientModel(name=ingredient_data["name"],description="")
+            ingredient_model = IngredientModel(name=ingredient_data["name"],description="",id=ingredient_data["ingredient_id"])
             ingredient_model.save()
             # Create and save the RecipeIngredientModel linking the recipe and ingredient
             recipe_ingredient_model = RecipeIngredientModel(recipe=recipe_model,
@@ -179,29 +176,6 @@ def delete_ingredient_view(request, ingredient_id):
             return HttpResponseBadRequest("Invalid ingredient ID")
     return HttpResponseBadRequest("Invalid request method.")
 
-# Create a new recipe
-# @csrf_exempt
-# def create_recipe_view(request):
-#     if request.method == 'POST':
-#         try:
-#             data = json.loads(request.body)
-#             name = data.get('name')
-#             ingredients = data.get('ingredients')
-#             elaboration = data.get('elaboration')
-
-#             if not name or not ingredients or not elaboration:
-#                 return HttpResponseBadRequest("Missing required fields.")
-
-#             recipe = create_recipe(name, ingredients, elaboration)
-#             return JsonResponse({
-#                 'name': recipe.name,
-#                 'ingredients': recipe.ingredients,
-#                 'elaboration': recipe.elaboration,
-#             }, status=201)
-#         except Exception as e:
-#             return HttpResponseServerError(str(e))
-#     return HttpResponseBadRequest("Invalid request method.")
-
 # Get a recipe by ID
 @csrf_exempt
 def get_recipe_by_id_view(request, recipe_id):
@@ -255,7 +229,7 @@ def update_recipe_view(request, recipe_id):
             if not recipe:
                 return HttpResponseNotFound("Recipe not found")
 
-            updated_recipe = update_recipe_use_case.update(recipe, new_name, new_ingredients, new_elaboration)
+            updated_recipe = update_recipe_use_case.update(recipe, recipe_id, new_name, new_ingredients, new_elaboration)
 
             return JsonResponse({
                 'name': updated_recipe.name,
@@ -272,7 +246,7 @@ def delete_recipe_view(request, recipe_id):
     if request.method == 'DELETE':
         try:
             delete_recipe_use_case.delete(recipe_id)
-            return JsonResponse({}, status=204)
+            return JsonResponse({"result":f"Receipe {recipe_id} deleted"}, status=204)
         except Exception as e:
             return HttpResponseServerError(str(e))
     return HttpResponseBadRequest("Invalid request method.")
