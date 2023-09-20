@@ -18,6 +18,7 @@ class ReadIngredientUseCase:
 
             # Create an Ingredient entity from the retrieved model data
             ingredient_entity = Ingredient(
+                id=ingredient_model.id,
                 name=ingredient_model.name,
                 description=ingredient_model.description,
             )
@@ -34,6 +35,7 @@ class ReadIngredientUseCase:
 
             # Create an Ingredient entity from the retrieved model data
             ingredient_entity = Ingredient(
+                id=ingredient_model.id,
                 name=ingredient_model.name,
                 description=ingredient_model.description,
             )
@@ -45,13 +47,14 @@ class ReadIngredientUseCase:
         
     def get_all(self) -> List[Ingredient]:
         # Use Django's ORM to retrieve all ingredients
-        ingredient_models = IngredientModel.objects.all()
+        ingredient_models = IngredientModel.objects.all().order_by('id')
 
         # Create a list of Ingredient entities from the retrieved model data
         ingredient_entities = [
             Ingredient(
                 name=ingredient_model.name,
                 description=ingredient_model.description,
+                id=ingredient_model.id
             )
             for ingredient_model in ingredient_models
         ]
@@ -99,13 +102,21 @@ class ReadRecipeUseCase:
     def get_by_name(self, name) -> Recipe:
         try:
             recipe_model = RecipeModel.objects.get(name=name)
-
+            recipe_ingredients_model = RecipeIngredientModel.objects.filter(recipe=recipe_model)
+            ingredients = []
+            for recipe_ingredient_model in recipe_ingredients_model:
+                ingredient_entity = {
+                    "id":recipe_ingredient_model.id,
+                    "name": recipe_ingredient_model.ingredient.name,
+                    "quantity": recipe_ingredient_model.quantity,
+                }
+                ingredients.append(ingredient_entity)
             recipe_entity = Recipe(
                 name=recipe_model.name,
-               # ingredients=recipe_model.ingredients,
+                ingredients=ingredients,
                 elaboration=recipe_model.elaboration,
+                id=recipe_model.id
             )
-
             return recipe_entity
         except RecipeModel.DoesNotExist:
             return None
@@ -117,6 +128,7 @@ class ReadRecipeUseCase:
             ingredients = []
             for recipe_ingredient_model in recipe_ingredients_model:
                 ingredient_entity = {
+                    "id":recipe_ingredient_model.id,
                     "name": recipe_ingredient_model.ingredient.name,
                     "quantity": recipe_ingredient_model.quantity,
                 }
@@ -125,6 +137,7 @@ class ReadRecipeUseCase:
                 name=recipe_model.name,
                 ingredients=ingredients,
                 elaboration=recipe_model.elaboration,
+                id=recipe_model.id
             )
 
             return recipe_entity
@@ -133,7 +146,7 @@ class ReadRecipeUseCase:
 
     def get_all(self) -> List[Recipe]:
         try:
-            recipe_models = RecipeModel.objects.all()
+            recipe_models = RecipeModel.objects.all().order_by('id')
 
             recipe_entities = []
 
@@ -144,12 +157,14 @@ class ReadRecipeUseCase:
                     ingredient_entity = {
                         "name": recipe_ingredient_model.ingredient.name,
                         "quantity": recipe_ingredient_model.quantity,
+                        "id": recipe_ingredient_model.id,
                     }
                     ingredients.append(ingredient_entity)
                 recipe_entities.append(Recipe(
                     name=recipe_model.name,
                     ingredients=ingredients,
                     elaboration=recipe_model.elaboration,
+                    id=recipe_model.id
                 ))
             return recipe_entities
         except Exception:

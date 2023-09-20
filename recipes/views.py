@@ -1,10 +1,8 @@
 import json
 from django.http import JsonResponse,HttpResponseBadRequest, HttpResponseNotFound, HttpResponseServerError
 from recipes.core.usecases import create_recipe, create_ingredient, ReadIngredientUseCase, UpdateIngredientUseCase, DeleteIngredientUseCase, ReadRecipeUseCase, UpdateRecipeUseCase,DeleteRecipeUseCase
-#from recipes.storage.repositories import IngredientRepositoryImpl
 from recipes.storage.models import RecipeModel, IngredientModel, RecipeIngredientModel
 from django.views.decorators.csrf import csrf_exempt
-
 
 read_ingredient_use_case = ReadIngredientUseCase()
 update_ingredient_use_case = UpdateIngredientUseCase()
@@ -12,41 +10,6 @@ delete_ingredient_use_case = DeleteIngredientUseCase()
 read_recipe_use_case = ReadRecipeUseCase()
 update_recipe_use_case = UpdateRecipeUseCase()
 delete_recipe_use_case = DeleteRecipeUseCase()
-
-@csrf_exempt
-def create_recipe_view(request):
-    if request.method == 'POST':
-        # Extract JSON data from the request
-        try:
-            json_data = json.loads(request.body)
-            name = json_data['name']
-            ingredients = json_data['ingredients']
-            elaboration = json_data['elaboration']
-        except json.JSONDecodeError as e:
-            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
-
-        # Call the domain use case to create a recipe
-        recipe_entity = create_recipe(name, ingredients, elaboration)
-        
-        recipe_model = RecipeModel(
-            name=name,
-            elaboration=elaboration
-        )
-        recipe_model.save()
-        for ingredient_data in ingredients:
-            ingredient_model = IngredientModel(name=ingredient_data["name"],description="",id=ingredient_data["ingredient_id"])
-            ingredient_model.save()
-            # Create and save the RecipeIngredientModel linking the recipe and ingredient
-            recipe_ingredient_model = RecipeIngredientModel(recipe=recipe_model,
-                                                            ingredient=ingredient_model,
-                                                            quantity=ingredient_data["quantity"])
-            recipe_ingredient_model.save()
-        # Return a JSON response
-        return JsonResponse({
-            'name': recipe_model.name,
-            'ingredients': recipe_entity.ingredients,
-            'elaboration': recipe_model.elaboration,
-        }, status=201)  # HTTP status 201 indicates creation
 
 @csrf_exempt
 def create_ingredient_view(request):
@@ -59,17 +22,15 @@ def create_ingredient_view(request):
         except json.JSONDecodeError as e:
             return JsonResponse({'error': 'Invalid JSON data'}, status=400)
 
-        # Call the domain use case to create a recipe
-        ingredient_entity = create_ingredient(name, description)
         ingredient_model = IngredientModel(
-            name=ingredient_entity.name,
-            description=ingredient_entity.description,
+            name=name,
+            description=description,
         )
         ingredient_model.save()
         # Return a JSON response
         return JsonResponse({
-            'name': ingredient_entity.name,
-            'description': ingredient_entity.description,
+            'name': ingredient_model.name,
+            'description': ingredient_model.description,
         }, status=201)  # HTTP status 201 indicates creation
 
 @csrf_exempt
@@ -118,6 +79,7 @@ def get_all_ingredients_view(request):
         # Create a list of dictionaries from the ingredient entities
         ingredients_data = [
             {
+                'id': ingredient.id,
                 'name': ingredient.name,
                 'description': ingredient.description,
             }
@@ -178,12 +140,46 @@ def delete_ingredient_view(request, ingredient_id):
 
 # Get a recipe by ID
 @csrf_exempt
+def create_recipe_view(request):
+    if request.method == 'POST':
+        # Extract JSON data from the request
+        try:
+            json_data = json.loads(request.body)
+            name = json_data['name']
+            ingredients = json_data['ingredients']
+            elaboration = json_data['elaboration']
+        except json.JSONDecodeError as e:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+
+        recipe_model = RecipeModel(
+            name=name,
+            elaboration=elaboration
+        )
+        recipe_model.save()
+        for ingredient_data in ingredients:
+            ingredient_model = IngredientModel(name=ingredient_data["name"],description="",id=ingredient_data["ingredient_id"])
+            #ingredient_model.save()
+            # Create and save the RecipeIngredientModel linking the recipe and ingredient
+            recipe_ingredient_model = RecipeIngredientModel(recipe=recipe_model,
+                                                            ingredient=ingredient_model,
+                                                            quantity=ingredient_data["quantity"],
+                                                            id=ingredient_model.id)
+            recipe_ingredient_model.save()
+        # Return a JSON response
+        return JsonResponse({
+            'name': name,
+            'ingredients': ingredients,
+            'elaboration': elaboration,
+        }, status=201)  # HTTP status 201 indicates creation
+
+@csrf_exempt
 def get_recipe_by_id_view(request, recipe_id):
     if request.method == 'GET':
         try:
             recipe = read_recipe_use_case.get_by_id(recipe_id)
             if recipe:
                 return JsonResponse({
+                    'id':recipe.id,
                     'name': recipe.name,
                     'ingredients': recipe.ingredients,
                     'elaboration': recipe.elaboration,
@@ -202,6 +198,7 @@ def get_recipe_by_name_view(request, name):
             recipe = read_recipe_use_case.get_by_name(name)
             if recipe:
                 return JsonResponse({
+                    'id':recipe.id,
                     'name': recipe.name,
                     'ingredients': recipe.ingredients,
                     'elaboration': recipe.elaboration,
@@ -262,6 +259,7 @@ def get_all_recipes_view(request):
                     'name': recipe.name,
                     'ingredients': recipe.ingredients,
                     'elaboration': recipe.elaboration,
+                    'id': recipe.id
                 }
                 for recipe in recipes
             ]
